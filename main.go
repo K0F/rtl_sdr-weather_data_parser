@@ -12,6 +12,7 @@ import (
 
 	//"strconv"
 	"net/http"
+  "github.com/gorilla/mux"
 	"strings"
 
 	"github.com/go-echarts/go-echarts/v2/charts"
@@ -164,10 +165,32 @@ func main() {
 		PORT = port
 	}
 
-	http.HandleFunc("/", httpserver)
-    http.HandleFunc("/weather.json", weatherHandler)
+  r := mux.NewRouter()
+
+  // Add CORS middleware
+	r.Use(func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Set appropriate headers to allow cross-origin requests
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+			// If it's a preflight request, just return with success status
+			if r.Method == "OPTIONS" {
+				w.WriteHeader(http.StatusOK)
+				return
+			}
+
+			// Call the next handler
+			next.ServeHTTP(w, r)
+		})
+	})
+
+
+	r.HandleFunc("/", httpserver)
+  r.HandleFunc("/weather.json", weatherHandler)
 	log.Printf("Serving @ port: %d\n", PORT)
-	http.ListenAndServe(fmt.Sprintf(":%d", PORT), nil)
+	http.ListenAndServe(fmt.Sprintf(":%d", PORT), r)
 }
 
 
