@@ -13,7 +13,9 @@ import (
 	//"strconv"
 	"net/http"
   "github.com/gorilla/mux"
-	"strings"
+	"github.com/rs/cors"
+
+  "strings"
 
 	"github.com/go-echarts/go-echarts/v2/charts"
 	"github.com/go-echarts/go-echarts/v2/opts"
@@ -189,8 +191,11 @@ func main() {
 
 	r.HandleFunc("/", httpserver)
   r.HandleFunc("/weather.json", weatherHandler)
+
+  c := cors.Default().Handler(r)
+
 	log.Printf("Serving @ port: %d\n", PORT)
-	http.ListenAndServe(fmt.Sprintf(":%d", PORT), r)
+	http.ListenAndServe(fmt.Sprintf(":%d", PORT), c)
 }
 
 
