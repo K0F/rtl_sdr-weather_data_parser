@@ -109,6 +109,10 @@ func readVals(filename string) []WheaterRecord {
 		records = append(records, r)
 	}
 
+	for next := true; next; next = len(records) > 1500 {
+		records = records[1:len(records)]
+	}
+
 	return records
 
 }
@@ -174,7 +178,7 @@ func generateLineItems() []opts.LineData {
 	return items
 }
 
-func httpserver(w http.ResponseWriter, _ *http.Request) {
+func httpserver(w http.ResponseWriter, request *http.Request) {
 
 	reloadData(INPUT_FILE)
 
@@ -184,9 +188,9 @@ func httpserver(w http.ResponseWriter, _ *http.Request) {
 	line.SetGlobalOptions(
 		charts.WithInitializationOpts(opts.Initialization{Theme: types.ThemeWesteros}),
 		charts.WithTitleOpts(opts.Title{
-			Title:    "Meteo data SOB",
-			Subtitle: "data from local station EMOS E6016",
-		}))
+			Title:    "Meteo data SOB23",
+			Subtitle: "Data from local station EMOS E6016",
+		}.SetLogo("shot.jpg")))
 
 	// Extract the 'Name' field as a slice of strings
 	times := make([]string, len(records))
@@ -197,9 +201,9 @@ func httpserver(w http.ResponseWriter, _ *http.Request) {
 	// Put data into instance
 
 	line.SetXAxis(times).
-		AddSeries("Temperature", getTemperature(records)).
-		AddSeries("Humidity", getHumidity(records)).
-		AddSeries("Wind speed m/s", getWind(records)).
+		AddSeries("Temperature ˚C", getTemperature(records)).
+		AddSeries("Humidity rel. %", getHumidity(records)).
+		AddSeries("Wind speed km/h", getWind(records)).
 		SetSeriesOptions(charts.WithLineChartOpts(opts.LineChart{Smooth: true}))
 	line.Render(w)
 }
