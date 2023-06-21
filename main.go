@@ -183,9 +183,9 @@ func weatherHandler(w http.ResponseWriter, r *http.Request) {
 
 func getWeather(w http.ResponseWriter, r *http.Request) {
 	// Assume you have a slice of WheaterRecord data
-	weatherData := records
+	weatherData := readVals(INPUT_FILE)
     
-    fmt.Println("Got %v records",len(records))
+    fmt.Printf("Got %v records\n",len(records))
 
 	// Marshal the weather data into JSON
 	jsonData, err := json.Marshal(weatherData)
@@ -221,7 +221,8 @@ func httpserver(w http.ResponseWriter, request *http.Request) {
 		charts.WithTitleOpts(opts.Title{
 			Title:    "Meteo data SOB23",
 			Subtitle: "Data from local station EMOS E6016",
-		}.SetLogo("shot.jpg")))
+		}))
+    //.SetLogo("shot.jpg")))
 
 	// Extract the 'Name' field as a slice of strings
 	times := make([]string, len(records))
