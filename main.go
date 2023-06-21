@@ -82,7 +82,7 @@ func readVals(filename string) []WheaterRecord {
 
 	file, err := os.Open(filename)
 	if err != nil {
-		log.Fatal(err)
+    fmt.Println("Got error reading file: %s",err.Error())
 	}
 	defer file.Close()
 
@@ -102,7 +102,7 @@ func readVals(filename string) []WheaterRecord {
 
 		err := json.Unmarshal([]byte(line), &r)
 		if err != nil {
-			fmt.Printf("Error decoding JSON: %v\n", err)
+      fmt.Printf("Error decoding JSON: %v len: %v\n", err.Error(), len(records))
 			continue
 		}
 
@@ -165,8 +165,39 @@ func main() {
 	}
 
 	http.HandleFunc("/", httpserver)
+    http.HandleFunc("/weather.json", weatherHandler)
 	log.Printf("Serving @ port: %d\n", PORT)
 	http.ListenAndServe(fmt.Sprintf(":%d", PORT), nil)
+}
+
+
+func weatherHandler(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		getWeather(w, r)
+	default:
+		w.WriteHeader(http.StatusMethodNotAllowed)
+	}
+}
+
+
+func getWeather(w http.ResponseWriter, r *http.Request) {
+	// Assume you have a slice of WheaterRecord data
+	weatherData := records
+    
+    fmt.Println("Got %v records",len(records))
+
+	// Marshal the weather data into JSON
+	jsonData, err := json.Marshal(weatherData)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "Failed to marshal JSON data: %v", err)
+		return
+	}
+
+	// Set the response content type and write the JSON data
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(jsonData)
 }
 
 // generate random data for line chart
