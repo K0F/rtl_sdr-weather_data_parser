@@ -1,3 +1,4 @@
-*.csv
-*.txt
 wheater_graph
+*.json
+*.bak*
+*.log

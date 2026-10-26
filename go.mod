@@ -1,6 +1,6 @@
 module wheater_graph
 
-go 1.20
+go 1.19
 
 require (
 	github.com/go-echarts/go-echarts/v2 v2.2.6

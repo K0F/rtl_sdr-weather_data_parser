@@ -1,0 +1,14 @@
+[Unit]
+Description=EMOS E6016 weather graph web server (wheater_graph, :8080)
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/root/rtl_sdr-weather_data_parser
+ExecStart=/root/rtl_sdr-weather_data_parser/wheater_graph
+Restart=always
+RestartSec=3
+User=root
+
+[Install]
+WantedBy=multi-user.target
