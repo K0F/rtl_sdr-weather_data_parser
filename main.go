@@ -22,6 +22,7 @@ import (
 
 type WheaterRecord struct {
 	Time         string  `json:"time"`
+	Source       string  `json:"source,omitempty"`
 	Model        string  `json:"model"`
 	Id           int     `json:"id"`
 	Channel      int     `json:"channel"`
@@ -37,6 +38,7 @@ type WheaterRecord struct {
 
 type RawRecord struct {
 	Time         string   `json:"time"`
+	Source       *string  `json:"source,omitempty"`
 	Model        string   `json:"model"`
 	Id           int      `json:"id"`
 	Channel      int      `json:"channel"`
@@ -149,6 +151,11 @@ func readVals(filename string) []WheaterRecord {
 		r.BatteryOk = raw.BatteryOk
 		r.RadioClock = raw.RadioClock
 		r.Mic = raw.Mic
+		if raw.Source != nil && *raw.Source != "" {
+			r.Source = *raw.Source
+		} else {
+			r.Source = "station"
+		}
 
 		// Update accumulated rain if present
 		if raw.RainMm != nil {
@@ -156,18 +163,28 @@ func readVals(filename string) []WheaterRecord {
 		}
 		r.RainMm = lastRainMm
 
-		// Handle weather vs rain packet
+		// Handle weather vs rain packet with physical sanity check
 		if raw.TemperatureC != nil {
-			r.TemperatureC = *raw.TemperatureC
-			lastTemp = r.TemperatureC
-			hasWeather = true
+			t := *raw.TemperatureC
+			if t >= -30.0 && t <= 45.0 {
+				r.TemperatureC = t
+				lastTemp = r.TemperatureC
+				hasWeather = true
+			} else if hasWeather {
+				r.TemperatureC = lastTemp
+			}
 		} else if hasWeather {
 			r.TemperatureC = lastTemp
 		}
 
 		if raw.Humidity != nil {
-			r.Humidity = *raw.Humidity
-			lastHum = r.Humidity
+			h := *raw.Humidity
+			if h >= 10 && h <= 100 {
+				r.Humidity = h
+				lastHum = r.Humidity
+			} else if hasWeather {
+				r.Humidity = lastHum
+			}
 		} else if hasWeather {
 			r.Humidity = lastHum
 		}
@@ -335,6 +352,23 @@ func httpserver(w http.ResponseWriter, request *http.Request) {
 	recordsLock.Unlock()
 
 	line := charts.NewLine()
+	subtitle := "EMOS E6016 Live Weather Station (Soběslavská Observatory)"
+	subtitleColor := "#94a3b8"
+	badgeText := "● Live Station Active"
+	badgeColor := "#10b981"
+	badgeBorder := "#059669"
+
+	if len(recs) > 0 {
+		latest := recs[len(recs)-1]
+		if strings.HasPrefix(latest.Source, "fallback") || latest.Model == "Open-Meteo-Fallback" {
+			subtitle = "EMOS E6016 Hardware Degraded — Fallback: Open-Meteo Active"
+			subtitleColor = "#fbbf24"
+			badgeText = "▲ Fallback: Open-Meteo Active"
+			badgeColor = "#f59e0b"
+			badgeBorder = "#d97706"
+		}
+	}
+
 	line.SetGlobalOptions(
 		charts.WithInitializationOpts(opts.Initialization{
 			Theme:  types.ThemeWesteros,
@@ -343,12 +377,12 @@ func httpserver(w http.ResponseWriter, request *http.Request) {
 		}),
 		charts.WithTitleOpts(opts.Title{
 			Title:    "Meteo data SOB23",
-			Subtitle: "EMOS E6016 Live Weather Station (Auto-reloads on new data)",
+			Subtitle: subtitle,
 			TitleStyle: &opts.TextStyle{
 				Color: "#e2e8f0",
 			},
 			SubtitleStyle: &opts.TextStyle{
-				Color: "#94a3b8",
+				Color: subtitleColor,
 			},
 		}),
 		charts.WithColorsOpts(opts.Colors{
@@ -437,7 +471,7 @@ func httpserver(w http.ResponseWriter, request *http.Request) {
 `
 
 	customBottom := `
-<div id="live-status">● Live Auto-Reload Active</div>
+` + fmt.Sprintf("<div id=\"live-status\" style=\"color: %s !important; border-color: %s !important;\">%s</div>", badgeColor, badgeBorder, badgeText) + `
 <script>
 (function() {
     window.addEventListener('resize', function() {
